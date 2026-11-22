@@ -51,6 +51,10 @@ interface NovelDao {
 
     @Query("SELECT COUNT(*) FROM novels WHERE inLibrary = 1")
     fun observeLibraryCount(): Flow<Int>
+
+    /** All novels (including not-in-library ones) for backup export. */
+    @Query("SELECT * FROM novels ORDER BY id ASC")
+    suspend fun getAll(): List<NovelEntity>
 }
 
 @Dao
@@ -105,6 +109,14 @@ interface ChapterDao {
 
     @Query("SELECT COUNT(*) FROM chapters WHERE novelId = :novelId AND isDownloaded = 1")
     suspend fun countDownloadedByNovel(novelId: Long): Int
+
+    /** All chapters for backup export. */
+    @Query("SELECT * FROM chapters ORDER BY id ASC")
+    suspend fun getAll(): List<ChapterEntity>
+
+    /** Resolve a chapter's current id by (novelId, url) after a restore. */
+    @Query("SELECT * FROM chapters WHERE novelId = :novelId AND url = :url LIMIT 1")
+    suspend fun getByNovelUrl(novelId: Long, url: String): ChapterEntity?
 }
 
 @Dao
@@ -126,6 +138,14 @@ interface CategoryDao {
 
     @Query("SELECT categoryId FROM novel_categories WHERE novelId = :novelId")
     suspend fun getNovelCategoryIds(novelId: Long): List<Long>
+
+    /** Resolve a category's current id by its unique name during restore. */
+    @Query("SELECT * FROM categories WHERE name = :name LIMIT 1")
+    suspend fun getByName(name: String): CategoryEntity?
+
+    /** All novel/category links for backup export. */
+    @Query("SELECT * FROM novel_categories ORDER BY novelId ASC, categoryId ASC")
+    suspend fun getAllNovelCategories(): List<NovelCategoryEntity>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertNovelCategory(nc: NovelCategoryEntity)
@@ -159,6 +179,10 @@ interface RepositoryDao {
 
     @Query("DELETE FROM repositories WHERE id = :id")
     suspend fun delete(id: Long)
+
+    /** All repositories for backup export. */
+    @Query("SELECT * FROM repositories ORDER BY id ASC")
+    suspend fun getAll(): List<RepositoryEntity>
 }
 
 @Dao
@@ -183,6 +207,10 @@ interface HistoryDao {
 
     @Query("DELETE FROM reading_history")
     suspend fun clearAll()
+
+    /** All raw history rows for backup export. */
+    @Query("SELECT * FROM reading_history ORDER BY chapterId ASC")
+    suspend fun getAll(): List<ReadingHistoryEntity>
 }
 
 data class HistoryRow(

@@ -56,11 +56,11 @@ class RoomNovelRepository(db: SoraDatabase) : NovelRepository {
         if (inLibrary) categories.insertNovelCategory(NovelCategoryEntity(novelId, 1L))
     }
 
-    override suspend fun updateChapterProgress(chapterId: Long, progress: Float, isRead: Boolean) {
+    override suspend fun updateChapterProgress(chapterId: Long, progress: Float, isRead: Boolean, recordHistory: Boolean) {
         chapters.updateProgress(chapterId, progress.coerceIn(0f, 1f), isRead)
         val chapter = chapters.getById(chapterId) ?: return
         novels.updateLastRead(chapter.novelId, System.currentTimeMillis())
-        if (isRead || progress > 0f) history.upsert(ReadingHistoryEntity(chapterId, System.currentTimeMillis()))
+        if (recordHistory && (isRead || progress > 0f)) history.upsert(ReadingHistoryEntity(chapterId, System.currentTimeMillis()))
         refreshNovelStats(chapter.novelId)
     }
 

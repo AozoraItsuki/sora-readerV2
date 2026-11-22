@@ -26,6 +26,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
+import app.sorareader.ui.navigation.BackupRoute
 import app.sorareader.ui.navigation.BrowseRoute
 import app.sorareader.ui.navigation.HistoryRoute
 import app.sorareader.ui.navigation.LibraryRoute
@@ -39,6 +40,7 @@ import app.sorareader.ui.navigation.AboutRoute
 import app.sorareader.ui.navigation.StatsRoute
 import app.sorareader.ui.navigation.SettingsRoute
 import app.sorareader.ui.navigation.UpdatesRoute
+import app.sorareader.ui.screens.backup.BackupScreen
 import app.sorareader.ui.screens.browse.BrowseScreen
 import app.sorareader.ui.screens.history.HistoryScreen
 import app.sorareader.ui.screens.library.LibraryScreen
@@ -97,11 +99,12 @@ fun SoraReaderRoot() {
                 composable<UpdatesRoute> { UpdatesScreen(onOpenNovel = { navController.navigate(NovelRoute(it)) }) }
                 composable<HistoryRoute> { HistoryScreen(onOpenChapter = { novelId, chapterId -> navController.navigate(ReaderRoute(novelId, chapterId)) }) }
                 composable<BrowseRoute> { BrowseScreen(onOpenNovel = { navController.navigate(NovelRoute(it)) }) }
-                composable<MoreRoute> { MoreScreen(onOpenSettings = { navController.navigate(SettingsRoute) }, onOpenRepositories = { navController.navigate(RepositoriesRoute) }, onOpenDownloads = { navController.navigate(DownloadsRoute) }, onOpenCategories = { navController.navigate(CategoriesRoute) }, onOpenAbout = { navController.navigate(AboutRoute) }, onOpenStats = { navController.navigate(StatsRoute) }) }
+                composable<MoreRoute> { MoreScreen(onOpenSettings = { navController.navigate(SettingsRoute) }, onOpenRepositories = { navController.navigate(RepositoriesRoute) }, onOpenDownloads = { navController.navigate(DownloadsRoute) }, onOpenCategories = { navController.navigate(CategoriesRoute) }, onOpenAbout = { navController.navigate(AboutRoute) }, onOpenStats = { navController.navigate(StatsRoute) }, onOpenBackup = { navController.navigate(BackupRoute) }) }
                 composable<DownloadsRoute> { DownloadsScreen(onBack = { navController.popBackStack() }) }
                 composable<CategoriesRoute> { CategoriesScreen(onBack = { navController.popBackStack() }) }
                 composable<AboutRoute> { AboutScreen(onBack = { navController.popBackStack() }) }
                 composable<StatsRoute> { StatsScreen(onBack = { navController.popBackStack() }) }
+                composable<BackupRoute> { BackupScreen(onBack = { navController.popBackStack() }) }
                 composable<SettingsRoute> { SettingsScreen(onBack = { navController.popBackStack() }) }
                 composable<RepositoriesRoute> { RepositoriesScreen(onBack = { navController.popBackStack() }) }
                 composable<NovelRoute> { entry ->
@@ -110,7 +113,12 @@ fun SoraReaderRoot() {
                 }
                 composable<ReaderRoute> { entry ->
                     val route = entry.toRoute<ReaderRoute>()
-                    ReaderScreen(novelId = route.novelId, chapterId = route.chapterId, onBack = { navController.popBackStack() })
+                    ReaderScreen(
+                        novelId = route.novelId,
+                        chapterId = route.chapterId,
+                        onBack = { navController.popBackStack() },
+                        onOpenChapter = { novelId, chapterId -> navController.navigate(ReaderRoute(novelId, chapterId)) },
+                    )
                 }
             }
         }

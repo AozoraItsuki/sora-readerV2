@@ -9,9 +9,11 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.serialization.Serializable
 
 private val Context.dataStore by preferencesDataStore("sora_settings")
 
+@Serializable
 data class ReaderSettings(
     val fontSize: Float = 16f,
     val lineHeight: Float = 1.6f,
@@ -21,6 +23,7 @@ data class ReaderSettings(
     val theme: String = "system",
 )
 
+@Serializable
 data class AppPreferences(
     val dynamicColor: Boolean = true,
     val amoled: Boolean = false,
@@ -42,6 +45,9 @@ class AppSettingsStore(private val context: Context) {
         val fullscreen = booleanPreferencesKey("reader_fullscreen")
         val readerTheme = stringPreferencesKey("reader_theme")
     }
+
+    /** Public observe API used by screens/viewmodels that need live reader settings. */
+    fun observe(): Flow<AppPreferences> = preferences
 
     val preferences: Flow<AppPreferences> = context.dataStore.data.map { p ->
         AppPreferences(
@@ -66,4 +72,18 @@ class AppSettingsStore(private val context: Context) {
     suspend fun setWifiOnly(v: Boolean) = context.dataStore.edit { it[K.wifiOnly] = v }
     suspend fun setFontSize(v: Float) = context.dataStore.edit { it[K.fontSize] = v }
     suspend fun setLineHeight(v: Float) = context.dataStore.edit { it[K.lineHeight] = v }
+
+    /** Restore a full preferences snapshot in one write (used by backup import). */
+    suspend fun restore(p: AppPreferences) = context.dataStore.edit { prefs ->
+        prefs[K.dynamicColor] = p.dynamicColor
+        prefs[K.amoled] = p.amoled
+        prefs[K.incognito] = p.incognito
+        prefs[K.wifiOnly] = p.wifiOnlyDownloads
+        prefs[K.fontSize] = p.reader.fontSize
+        prefs[K.lineHeight] = p.reader.lineHeight
+        prefs[K.padding] = p.reader.padding
+        prefs[K.keepScreenOn] = p.reader.keepScreenOn
+        prefs[K.fullscreen] = p.reader.fullscreen
+        prefs[K.readerTheme] = p.reader.theme
+    }
 }

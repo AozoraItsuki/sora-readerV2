@@ -2,6 +2,7 @@ package app.sorareader.di
 
 import android.content.Context
 import androidx.room.Room
+import app.sorareader.data.backup.BackupManagerImpl
 import app.sorareader.data.download.SimpleDownloadManager
 import app.sorareader.data.local.db.SoraDatabase
 import app.sorareader.data.repository.RepositoryStoreImpl
@@ -9,6 +10,7 @@ import app.sorareader.data.repository.RoomNovelRepository
 import app.sorareader.data.settings.AppSettingsStore
 import app.sorareader.data.source.RepositoryBackedSourceCatalog
 import app.sorareader.data.source.SimpleSourceCatalog
+import app.sorareader.domain.backup.BackupManager
 import app.sorareader.domain.repository.DownloadManager
 import app.sorareader.domain.repository.NovelRepository
 import app.sorareader.domain.repository.RepositoryStore
@@ -38,6 +40,7 @@ class AppContainer(context: Context) {
     val repositoryStore: RepositoryStore = RepositoryStoreImpl(database)
     val sourceCatalog: SourceCatalog = RepositoryBackedSourceCatalog(repositoryStore, httpClient, json, SimpleSourceCatalog())
     val settings: AppSettingsStore = AppSettingsStore(context.applicationContext)
+    val backupManager: BackupManager = BackupManagerImpl(context.applicationContext, database, novelRepository, settings)
     val downloadManager: DownloadManager = SimpleDownloadManager(context.applicationContext).also { SimpleDownloadManager.instance = it }
 
     init {

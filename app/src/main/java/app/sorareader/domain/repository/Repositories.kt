@@ -25,7 +25,7 @@ interface NovelRepository {
     suspend fun upsertNovel(novel: Novel): Long
     suspend fun upsertChapters(chapters: List<Chapter>)
     suspend fun setInLibrary(novelId: Long, inLibrary: Boolean)
-    suspend fun updateChapterProgress(chapterId: Long, progress: Float, isRead: Boolean)
+    suspend fun updateChapterProgress(chapterId: Long, progress: Float, isRead: Boolean, recordHistory: Boolean = true)
     suspend fun markChapterDownloaded(chapterId: Long, downloaded: Boolean, contentPath: String?)
     suspend fun toggleBookmark(chapterId: Long, bookmarked: Boolean)
     suspend fun markNovelRead(novelId: Long, read: Boolean)

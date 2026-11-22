@@ -14,6 +14,7 @@ import kotlinx.serialization.Serializable
 @Serializable object CategoriesRoute
 @Serializable object AboutRoute
 @Serializable object StatsRoute
+@Serializable object BackupRoute
 
 @Serializable data class NovelRoute(val novelId: Long)
 @Serializable data class ReaderRoute(val novelId: Long, val chapterId: Long)

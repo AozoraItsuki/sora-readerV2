@@ -5,6 +5,7 @@ import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import app.sorareader.SoraReaderApp
+import app.sorareader.ui.screens.backup.BackupViewModel
 import app.sorareader.ui.screens.browse.BrowseViewModel
 import app.sorareader.ui.screens.categories.CategoriesViewModel
 import app.sorareader.ui.screens.downloads.DownloadsViewModel
@@ -22,7 +23,7 @@ object AppViewModelProvider {
         initializer { LibraryViewModel(app().container.novelRepository) }
         initializer { BrowseViewModel(app().container.novelRepository, app().container.sourceCatalog) }
         initializer { NovelDetailViewModel(app().container.novelRepository, app().container.sourceCatalog, app().container.downloadManager) }
-        initializer { ReaderViewModel(app().container.novelRepository, app().container.sourceCatalog, app().applicationContext) }
+        initializer { ReaderViewModel(app().container.novelRepository, app().container.sourceCatalog, app().applicationContext, app().container.settings) }
         initializer { HistoryViewModel(app().container.novelRepository) }
         initializer { UpdatesViewModel(app().container.novelRepository) }
         initializer { SettingsViewModel(app().container.settings) }
@@ -30,6 +31,7 @@ object AppViewModelProvider {
         initializer { DownloadsViewModel(app().container.downloadManager) }
         initializer { CategoriesViewModel(app().container.novelRepository) }
         initializer { StatsViewModel(app().container.novelRepository) }
+        initializer { BackupViewModel(app().container.backupManager) }
     }
 }
 
