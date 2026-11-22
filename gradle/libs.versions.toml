@@ -17,6 +17,7 @@ work = "2.10.0"
 jsoup = "1.18.3"
 okio = "3.9.1"
 desugar = "2.1.4"
+quickjs = "0.9.2"
 junit = "4.13.2"
 androidxTestExt = "1.2.1"
 espresso = "3.6.1"
@@ -52,6 +53,7 @@ kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-
 kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
 jsoup = { group = "org.jsoup", name = "jsoup", version.ref = "jsoup" }
 okio = { group = "com.squareup.okio", name = "okio", version.ref = "okio" }
+quickjs-android = { group = "app.cash.quickjs", name = "quickjs-android", version.ref = "quickjs" }
 desugar-jdk-libs = { group = "com.android.tools", name = "desugar_jdk_libs", version.ref = "desugar" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "androidxTestExt" }

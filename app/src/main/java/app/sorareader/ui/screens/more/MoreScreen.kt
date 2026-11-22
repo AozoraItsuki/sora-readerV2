@@ -23,11 +23,12 @@ import androidx.compose.ui.Modifier
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MoreScreen(onOpenSettings: () -> Unit, onOpenRepositories: () -> Unit, onOpenDownloads: () -> Unit, onOpenCategories: () -> Unit, onOpenAbout: () -> Unit, onOpenStats: () -> Unit, onOpenBackup: () -> Unit) {
+fun MoreScreen(onOpenSettings: () -> Unit, onOpenRepositories: () -> Unit, onOpenPlugins: () -> Unit, onOpenDownloads: () -> Unit, onOpenCategories: () -> Unit, onOpenAbout: () -> Unit, onOpenStats: () -> Unit, onOpenBackup: () -> Unit) {
     Scaffold(topBar = { LargeTopAppBar(title = { Text("More") }) }) { inner ->
         Column(Modifier.fillMaxSize().padding(inner)) {
             ListItem(headlineContent = { Text("Settings") }, supportingContent = { Text("Appearance, reader, downloads, backup") }, leadingContent = { Icon(Icons.Default.Settings, null) }, modifier = Modifier.clickable(onClick = onOpenSettings))
             ListItem(headlineContent = { Text("Repositories") }, supportingContent = { Text("Manage simple JSON source repositories") }, leadingContent = { Icon(Icons.Default.Extension, null) }, modifier = Modifier.clickable(onClick = onOpenRepositories))
+            ListItem(headlineContent = { Text("JS Plugins") }, supportingContent = { Text("Install legacy LNReader-style JS plugins (MVP)") }, leadingContent = { Icon(Icons.Default.Extension, null) }, modifier = Modifier.clickable(onClick = onOpenPlugins))
             ListItem(headlineContent = { Text("Downloads") }, supportingContent = { Text("Download queue (WorkManager MVP)") }, leadingContent = { Icon(Icons.Default.Download, null) }, modifier = Modifier.clickable(onClick = onOpenDownloads))
             ListItem(headlineContent = { Text("Categories") }, supportingContent = { Text("Manage library categories") }, leadingContent = { Icon(Icons.Default.Category, null) }, modifier = Modifier.clickable(onClick = onOpenCategories))
             ListItem(headlineContent = { Text("Statistics") }, supportingContent = { Text("Library and reading stats") }, leadingContent = { Icon(Icons.Default.BarChart, null) }, modifier = Modifier.clickable(onClick = onOpenStats))

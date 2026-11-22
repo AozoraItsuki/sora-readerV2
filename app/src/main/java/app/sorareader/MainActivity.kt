@@ -1,9 +1,13 @@
 package app.sorareader
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -36,6 +40,7 @@ import app.sorareader.ui.navigation.HistoryRoute
 import app.sorareader.ui.navigation.LibraryRoute
 import app.sorareader.ui.navigation.MoreRoute
 import app.sorareader.ui.navigation.NovelRoute
+import app.sorareader.ui.navigation.PluginsRoute
 import app.sorareader.ui.navigation.ReaderRoute
 import app.sorareader.ui.navigation.RepositoriesRoute
 import app.sorareader.ui.navigation.DownloadsRoute
@@ -53,6 +58,7 @@ import app.sorareader.ui.screens.novel.NovelDetailScreen
 import app.sorareader.ui.screens.reader.ReaderScreen
 import app.sorareader.ui.screens.downloads.DownloadsScreen
 import app.sorareader.ui.screens.categories.CategoriesScreen
+import app.sorareader.ui.screens.plugins.PluginsScreen
 import app.sorareader.ui.screens.settings.RepositoriesScreen
 import app.sorareader.ui.screens.settings.AboutScreen
 import app.sorareader.ui.screens.stats.StatsScreen
@@ -61,9 +67,19 @@ import app.sorareader.ui.screens.updates.UpdatesScreen
 import app.sorareader.ui.theme.SoraReaderTheme
 
 class MainActivity : ComponentActivity() {
+    // Notifications are optional: the download worker degrades gracefully if denied.
+    private val requestNotificationPermission = registerForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { /* Nothing to do — downloads run with or without notification permission. */ }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            requestNotificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
         val settings = (application as SoraReaderApp).container.settings
         setContent {
             val prefs by settings.observe().collectAsStateWithLifecycle(initialValue = AppPreferences())
@@ -116,7 +132,7 @@ fun SoraReaderRoot() {
                 composable<UpdatesRoute> { UpdatesScreen(onOpenNovel = { navController.navigate(NovelRoute(it)) }) }
                 composable<HistoryRoute> { HistoryScreen(onOpenChapter = { novelId, chapterId -> navController.navigate(ReaderRoute(novelId, chapterId)) }) }
                 composable<BrowseRoute> { BrowseScreen(onOpenNovel = { navController.navigate(NovelRoute(it)) }) }
-                composable<MoreRoute> { MoreScreen(onOpenSettings = { navController.navigate(SettingsRoute) }, onOpenRepositories = { navController.navigate(RepositoriesRoute) }, onOpenDownloads = { navController.navigate(DownloadsRoute) }, onOpenCategories = { navController.navigate(CategoriesRoute) }, onOpenAbout = { navController.navigate(AboutRoute) }, onOpenStats = { navController.navigate(StatsRoute) }, onOpenBackup = { navController.navigate(BackupRoute) }) }
+                composable<MoreRoute> { MoreScreen(onOpenSettings = { navController.navigate(SettingsRoute) }, onOpenRepositories = { navController.navigate(RepositoriesRoute) }, onOpenPlugins = { navController.navigate(PluginsRoute) }, onOpenDownloads = { navController.navigate(DownloadsRoute) }, onOpenCategories = { navController.navigate(CategoriesRoute) }, onOpenAbout = { navController.navigate(AboutRoute) }, onOpenStats = { navController.navigate(StatsRoute) }, onOpenBackup = { navController.navigate(BackupRoute) }) }
                 composable<DownloadsRoute> { DownloadsScreen(onBack = { navController.popBackStack() }) }
                 composable<CategoriesRoute> { CategoriesScreen(onBack = { navController.popBackStack() }) }
                 composable<AboutRoute> { AboutScreen(onBack = { navController.popBackStack() }) }
@@ -124,6 +140,7 @@ fun SoraReaderRoot() {
                 composable<BackupRoute> { BackupScreen(onBack = { navController.popBackStack() }) }
                 composable<SettingsRoute> { SettingsScreen(onBack = { navController.popBackStack() }) }
                 composable<RepositoriesRoute> { RepositoriesScreen(onBack = { navController.popBackStack() }) }
+                composable<PluginsRoute> { PluginsScreen(onBack = { navController.popBackStack() }) }
                 composable<NovelRoute> { entry ->
                     val route = entry.toRoute<NovelRoute>()
                     NovelDetailScreen(novelId = route.novelId, onBack = { navController.popBackStack() }, onOpenChapter = { navController.navigate(ReaderRoute(route.novelId, it)) })

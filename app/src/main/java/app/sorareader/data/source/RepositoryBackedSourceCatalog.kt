@@ -17,11 +17,16 @@ class RepositoryBackedSourceCatalog(
     private val client: HttpClient,
     private val json: Json = Json { ignoreUnknownKeys = true },
     private val builtIn: SourceCatalog = SimpleSourceCatalog(),
+    private val pluginCatalog: SourceCatalog? = null,
 ) : SourceCatalog {
     private suspend fun delegates(): List<SourceCatalog> {
         val repos = repositoryStore.observeRepositories().first().filter { it.enabled }
         val remotes = repos.map { RemoteJsonSourceCatalog(client, it.url, json) }
-        return listOf(builtIn) + remotes
+        return buildList {
+            add(builtIn)
+            pluginCatalog?.let { add(it) }
+            addAll(remotes)
+        }
     }
 
     override fun availableSources(): List<SourceDescriptor> = builtIn.availableSources()

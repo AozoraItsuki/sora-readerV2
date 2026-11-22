@@ -5,6 +5,8 @@ import androidx.room.Room
 import app.sorareader.data.backup.BackupManagerImpl
 import app.sorareader.data.download.SimpleDownloadManager
 import app.sorareader.data.local.db.SoraDatabase
+import app.sorareader.data.plugin.PluginManager
+import app.sorareader.data.plugin.PluginSourceCatalog
 import app.sorareader.data.repository.RepositoryStoreImpl
 import app.sorareader.data.repository.RoomNovelRepository
 import app.sorareader.data.settings.AppSettingsStore
@@ -24,11 +26,17 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
+import okhttp3.OkHttpClient
+import java.util.concurrent.TimeUnit
 
 class AppContainer(context: Context) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val json = Json { ignoreUnknownKeys = true }
     val httpClient = HttpClient(OkHttp) { install(ContentNegotiation) { json(json) } }
+    val okHttpClient: OkHttpClient = OkHttpClient.Builder()
+        .connectTimeout(20, TimeUnit.SECONDS)
+        .readTimeout(30, TimeUnit.SECONDS)
+        .build()
 
     val database: SoraDatabase = Room.databaseBuilder(
         context.applicationContext,
@@ -38,7 +46,9 @@ class AppContainer(context: Context) {
 
     val novelRepository: NovelRepository = RoomNovelRepository(database)
     val repositoryStore: RepositoryStore = RepositoryStoreImpl(database)
-    val sourceCatalog: SourceCatalog = RepositoryBackedSourceCatalog(repositoryStore, httpClient, json, SimpleSourceCatalog())
+    val pluginManager: PluginManager = PluginManager(context.applicationContext, okHttpClient, json)
+    val pluginSourceCatalog: SourceCatalog = PluginSourceCatalog(pluginManager)
+    val sourceCatalog: SourceCatalog = RepositoryBackedSourceCatalog(repositoryStore, httpClient, json, SimpleSourceCatalog(), pluginSourceCatalog)
     val settings: AppSettingsStore = AppSettingsStore(context.applicationContext)
     val backupManager: BackupManager = BackupManagerImpl(context.applicationContext, database, novelRepository, settings)
     val downloadManager: DownloadManager = SimpleDownloadManager(context.applicationContext, settings).also { SimpleDownloadManager.instance = it }

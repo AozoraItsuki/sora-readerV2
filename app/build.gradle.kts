@@ -94,6 +94,7 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.jsoup)
     implementation(libs.okio)
+    implementation(libs.quickjs.android)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

@@ -10,6 +10,7 @@ import kotlinx.serialization.Serializable
 
 @Serializable object SettingsRoute
 @Serializable object RepositoriesRoute
+@Serializable object PluginsRoute
 @Serializable object DownloadsRoute
 @Serializable object CategoriesRoute
 @Serializable object AboutRoute

@@ -12,6 +12,7 @@ import app.sorareader.ui.screens.downloads.DownloadsViewModel
 import app.sorareader.ui.screens.history.HistoryViewModel
 import app.sorareader.ui.screens.library.LibraryViewModel
 import app.sorareader.ui.screens.novel.NovelDetailViewModel
+import app.sorareader.ui.screens.plugins.PluginsViewModel
 import app.sorareader.ui.screens.reader.ReaderViewModel
 import app.sorareader.ui.screens.settings.RepositoriesViewModel
 import app.sorareader.ui.screens.settings.SettingsViewModel
@@ -28,6 +29,7 @@ object AppViewModelProvider {
         initializer { UpdatesViewModel(app().container.novelRepository) }
         initializer { SettingsViewModel(app().container.settings) }
         initializer { RepositoriesViewModel(app().container.repositoryStore) }
+        initializer { PluginsViewModel(app().container.pluginManager) }
         initializer { DownloadsViewModel(app().container.downloadManager) }
         initializer { CategoriesViewModel(app().container.novelRepository) }
         initializer { StatsViewModel(app().container.novelRepository) }

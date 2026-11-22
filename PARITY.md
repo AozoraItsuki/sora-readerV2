@@ -27,7 +27,7 @@ Status: **in progress**. Honest parity tracker for Kotlin+Compose Material 3 reb
 - [ ] Custom reader themes/CSS/JS, volume/S-Pen, auto-scroll parity
 
 ## Downloads / Storage / Backup
-- [~] WorkManager download manager/worker + Downloads screen (no FGS/parallel/retry/Tor/proxy/notification parity)
+- [~] WorkManager download manager/worker + Downloads screen (dataSync FGS notification, live WorkInfo progress, Wi-Fi-only constraint, retry/backoff; no parallel/Tor/proxy/download settings parity)
 - [~] Backup placeholder manager only
 - [ ] SAF/shared storage migration parity
 - [ ] EPUB/PDF import/export parity

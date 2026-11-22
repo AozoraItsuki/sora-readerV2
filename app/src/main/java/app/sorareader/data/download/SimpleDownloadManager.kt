@@ -1,6 +1,7 @@
 package app.sorareader.data.download
 
 import android.content.Context
+import androidx.work.BackoffPolicy
 import androidx.work.Constraints
 import androidx.work.Data
 import androidx.work.ExistingWorkPolicy
@@ -28,6 +29,7 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.File
 import java.util.UUID
+import java.util.concurrent.TimeUnit
 
 class SimpleDownloadManager(
     private val context: Context,
@@ -41,10 +43,11 @@ class SimpleDownloadManager(
 
     init {
         loadQueue()
-        // WorkManager keeps its own queue; align persisted statuses with it after a process restart.
-        // Grab the instance on the main thread, then do the blocking read on IO.
+        // WorkManager keeps its own queue. Observing its WorkInfo flow both reconciles
+        // persisted statuses after a process restart and keeps progress live while running.
+        // Grab the instance on the main thread, then collect on IO.
         val workManager = WorkManager.getInstance(context)
-        scope.launch { reconcileWithWorkManager(workManager) }
+        scope.launch { observeWorkManager(workManager) }
     }
 
     override fun observeQueue(): Flow<List<DownloadTask>> = tasks.asStateFlow()
@@ -68,20 +71,24 @@ class SimpleDownloadManager(
         updateTasks { it + newTasks }
 
         val wm = WorkManager.getInstance(context)
-        newTasks.forEachIndexed { index, task ->
+        newTasks.forEach { task ->
             val req = OneTimeWorkRequestBuilder<DownloadChapterWorker>()
-                .addTag(TAG_CHAPTER_DOWNLOAD)
+                .addTag(DownloadChapterWorker.TAG)
                 .addTag("$TAG_TASK_PREFIX${task.id}")
                 .setInputData(
                     Data.Builder()
-                        .putLong("chapterId", task.chapterId)
-                        .putLong("novelId", task.novelId)
-                        .putString("taskId", task.id)
+                        .putLong(DownloadChapterWorker.KEY_CHAPTER_ID, task.chapterId)
+                        .putLong(DownloadChapterWorker.KEY_NOVEL_ID, task.novelId)
+                        .putString(DownloadChapterWorker.KEY_TASK_ID, task.id)
+                        .putString(DownloadChapterWorker.KEY_NOVEL_TITLE, task.novelTitle)
+                        .putString(DownloadChapterWorker.KEY_CHAPTER_TITLE, task.chapterTitle)
                         .build()
                 )
                 .setConstraints(Constraints.Builder().setRequiredNetworkType(networkType).build())
+                // Worker returns Result.retry() on transient errors; back off exponentially.
+                .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, INITIAL_BACKOFF_MS, TimeUnit.MILLISECONDS)
                 .build()
-            wm.enqueueUniqueWork("download-${chapters[index].id}", ExistingWorkPolicy.KEEP, req)
+            wm.enqueueUniqueWork("download-${task.chapterId}", ExistingWorkPolicy.KEEP, req)
         }
     }
 
@@ -91,7 +98,8 @@ class SimpleDownloadManager(
     }
 
     override suspend fun cancelAll() {
-        WorkManager.getInstance(context).cancelAllWorkByTag(TAG_CHAPTER_DOWNLOAD)
+        // Cancels queued and currently running WorkManager jobs, not just the local list.
+        WorkManager.getInstance(context).cancelAllWorkByTag(DownloadChapterWorker.TAG)
         updateTasks { list ->
             list.map { task ->
                 if (task.status == DownloadStatus.QUEUED || task.status == DownloadStatus.RUNNING) {
@@ -135,36 +143,46 @@ class SimpleDownloadManager(
         }
     }
 
-    private suspend fun reconcileWithWorkManager(workManager: WorkManager) = withContext(Dispatchers.IO) {
-        val infos = runCatching {
-            workManager.getWorkInfosByTag(TAG_CHAPTER_DOWNLOAD).get()
-        }.getOrNull() ?: return@withContext
+    private suspend fun observeWorkManager(workManager: WorkManager) = withContext(Dispatchers.IO) {
+        workManager.getWorkInfosByTagFlow(DownloadChapterWorker.TAG).collect { infos ->
+            val byTask = infos.mapNotNull { info ->
+                val taskId = info.tags.firstOrNull { it.startsWith(TAG_TASK_PREFIX) }
+                    ?.removePrefix(TAG_TASK_PREFIX)
+                taskId?.let { it to info }
+            }.toMap()
 
-        val stateByTask = infos.associate { info ->
-            val taskId = info.tags.firstOrNull { it.startsWith(TAG_TASK_PREFIX) }?.removePrefix(TAG_TASK_PREFIX)
-            taskId to info.state
-        }
-
-        updateTasks { list ->
-            list.map { task ->
-                if (task.status == DownloadStatus.QUEUED || task.status == DownloadStatus.RUNNING) {
-                    when (stateByTask[task.id]) {
-                        WorkInfo.State.CANCELLED -> task.copy(status = DownloadStatus.CANCELLED)
-                        WorkInfo.State.SUCCEEDED -> task.copy(status = DownloadStatus.COMPLETED, progress = 1f)
-                        WorkInfo.State.FAILED -> task.copy(status = DownloadStatus.FAILED)
-                        else -> task
+            updateTasks { list ->
+                list.map { task ->
+                    val info = byTask[task.id] ?: return@map task
+                    when (info.state) {
+                        WorkInfo.State.SUCCEEDED -> task.copy(
+                            status = DownloadStatus.COMPLETED,
+                            progress = 1f,
+                            error = null,
+                        )
+                        WorkInfo.State.FAILED -> task.copy(
+                            status = DownloadStatus.FAILED,
+                            error = info.outputData.getString(DownloadChapterWorker.KEY_ERROR) ?: task.error,
+                        )
+                        WorkInfo.State.CANCELLED -> task.copy(status = DownloadStatus.CANCELLED, error = null)
+                        WorkInfo.State.RUNNING -> task.copy(
+                            status = DownloadStatus.RUNNING,
+                            progress = maxOf(
+                                task.progress,
+                                info.progress.getFloat(DownloadChapterWorker.KEY_PROGRESS, 0f),
+                            ),
+                        )
+                        WorkInfo.State.ENQUEUED, WorkInfo.State.BLOCKED -> task.copy(status = DownloadStatus.QUEUED)
                     }
-                } else {
-                    task
                 }
             }
         }
     }
 
     companion object {
-        private const val TAG_CHAPTER_DOWNLOAD = "chapter-download"
         private const val TAG_TASK_PREFIX = "download-task-"
         private const val QUEUE_FILE_NAME = "download_queue.json"
+        private const val INITIAL_BACKOFF_MS = 10_000L
 
         @Volatile
         var instance: SimpleDownloadManager? = null
