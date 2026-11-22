@@ -59,7 +59,10 @@ class LocalBookManagerImpl(
                 return@withContext EpubImportResult.Failure("No readable chapters found in this EPUB")
             }
 
-            val displayName = runCatching { DocumentsContract.getDocumentDisplayName(uri) }.getOrNull()
+            val displayName = runCatching {
+                context.contentResolver.query(uri, arrayOf(DocumentsContract.Document.COLUMN_DISPLAY_NAME), null, null, null)
+                    ?.use { c -> if (c.moveToFirst()) c.getString(0) else null }
+            }.getOrNull()
             val title = book.title.ifBlank { displayName?.substringBeforeLast('.')?.trim().orEmpty() }
                 .ifBlank { "Imported EPUB" }
             val novelUrl = uri.toString()
@@ -281,8 +284,8 @@ class LocalBookManagerImpl(
         factory.isNamespaceAware = false
         factory.isExpandEntityReferences = false
         runCatching { factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true) }
-        runCatching { factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "") }
-        runCatching { factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "") }
+        runCatching { factory.setAttribute("http://javax.xml.XMLConstants/property/accessExternalDTD", "") }
+        runCatching { factory.setAttribute("http://javax.xml.XMLConstants/property/accessExternalSchema", "") }
         factory.newDocumentBuilder().parse(ByteArrayInputStream(bytes))
     }.getOrNull()
 
