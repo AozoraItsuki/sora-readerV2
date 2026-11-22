@@ -14,7 +14,10 @@ import java.io.File
 class PluginManager(
     private val context: Context,
     private val client: OkHttpClient,
-    private val json: Json = Json { ignoreUnknownKeys = true, prettyPrint = true },
+    private val json: Json = Json {
+        ignoreUnknownKeys = true
+        prettyPrint = true
+    },
 ) {
     private val mutex = Mutex()
     private val runtime = PluginRuntime(client = client, json = json)
