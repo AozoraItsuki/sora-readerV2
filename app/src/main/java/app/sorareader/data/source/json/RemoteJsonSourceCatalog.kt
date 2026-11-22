@@ -20,6 +20,9 @@ class RemoteJsonSourceCatalog(
     private val manifestUrl: String,
     private val json: Json = Json { ignoreUnknownKeys = true },
 ) : SourceCatalog {
+    /** Stable routing id derived from the manifest location; used by descriptors and by every novel returned here. */
+    val sourceId: String = "remote-" + manifestUrl.hashCode().toUInt().toString(16)
+
     private var cached: JsonSourcePayload? = null
 
     private suspend fun load(): JsonSourcePayload {
@@ -28,27 +31,32 @@ class RemoteJsonSourceCatalog(
         return json.decodeFromString(JsonSourcePayload.serializer(), text).also { cached = it }
     }
 
+    /** Drop the cached manifest so the next call re-fetches it. */
+    fun invalidate() { cached = null }
+
     override fun availableSources(): List<SourceDescriptor> = listOf(
-        SourceDescriptor(id = manifestUrl.hashCode().toString(), name = "JSON: $manifestUrl", lang = "multi", site = manifestUrl, isInstalled = true)
+        SourceDescriptor(id = sourceId, name = "JSON: $manifestUrl", lang = "multi", site = manifestUrl, isInstalled = true)
     )
 
     override suspend fun browse(sourceId: String, query: String, page: Int): List<Novel> {
         val payload = load()
         val q = query.trim().lowercase()
-        return payload.novels.filter { q.isBlank() || it.title.lowercase().contains(q) || it.author.lowercase().contains(q) }.map { it.toDomain(payload.id) }
+        return payload.novels.filter { q.isBlank() || it.title.lowercase().contains(q) || it.author.lowercase().contains(q) }.map { it.toDomain(this.sourceId) }
     }
 
     override suspend fun fetchNovelDetails(sourceId: String, novelUrl: String): SourceNovel {
         val payload = load()
-        val n = payload.novels.first { it.url == novelUrl }
+        val n = payload.novels.firstOrNull { it.url == novelUrl }
+            ?: error("Novel not found in source $manifestUrl: $novelUrl")
         val chapters = n.chapters.mapIndexed { i, c -> c.toDomain(0, i) }
-        return SourceNovel(sourceId = payload.id, url = n.url, title = n.title, author = n.author, artist = n.artist, coverUrl = n.coverUrl, description = n.description, status = runCatching { NovelStatus.valueOf(n.status.uppercase()) }.getOrDefault(NovelStatus.UNKNOWN), genres = n.genres, tags = n.tags, chapters = chapters)
+        return SourceNovel(sourceId = this.sourceId, url = n.url, title = n.title, author = n.author, artist = n.artist, coverUrl = n.coverUrl, description = n.description, status = runCatching { NovelStatus.valueOf(n.status.uppercase()) }.getOrDefault(NovelStatus.UNKNOWN), genres = n.genres, tags = n.tags, chapters = chapters)
     }
 
     override suspend fun fetchChapters(sourceId: String, novelUrl: String): List<Chapter> = fetchNovelDetails(sourceId, novelUrl).chapters
     override suspend fun fetchChapterContent(sourceId: String, chapterUrl: String): ChapterContent {
         val payload = load()
-        val chapter = payload.novels.flatMap { it.chapters }.first { it.url == chapterUrl }
+        val chapter = payload.novels.flatMap { it.chapters }.firstOrNull { it.url == chapterUrl }
+            ?: error("Chapter not found in source $manifestUrl: $chapterUrl")
         return ChapterContent(chapterId = chapter.url.hashCode().toLong(), title = chapter.title, paragraphs = chapter.content.ifEmpty { listOf("No content.") })
     }
 }

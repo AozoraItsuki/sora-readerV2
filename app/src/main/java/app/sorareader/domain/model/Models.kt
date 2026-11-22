@@ -116,6 +116,7 @@ data class HistoryEntry(
 
 data class ChapterContent(val chapterId: Long, val title: String, val paragraphs: List<String>, val html: String? = null)
 
+@Serializable
 data class DownloadTask(
     val id: String,
     val chapterId: Long,
@@ -127,6 +128,7 @@ data class DownloadTask(
     val error: String? = null,
 )
 
+@Serializable
 enum class DownloadStatus { QUEUED, RUNNING, COMPLETED, FAILED, CANCELLED }
 
 data class BackupOptions(

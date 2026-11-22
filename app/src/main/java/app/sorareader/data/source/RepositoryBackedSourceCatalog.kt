@@ -25,7 +25,7 @@ class RepositoryBackedSourceCatalog(
     }
 
     override fun availableSources(): List<SourceDescriptor> = builtIn.availableSources()
-    suspend fun availableSourcesAsync(): List<SourceDescriptor> = CompositeSourceCatalog(delegates()).availableSources()
+    override suspend fun availableSourcesAsync(): List<SourceDescriptor> = CompositeSourceCatalog(delegates()).availableSourcesAsync()
     override suspend fun browse(sourceId: String, query: String, page: Int): List<Novel> = CompositeSourceCatalog(delegates()).browse(sourceId, query, page)
     override suspend fun fetchNovelDetails(sourceId: String, novelUrl: String): SourceNovel = CompositeSourceCatalog(delegates()).fetchNovelDetails(sourceId, novelUrl)
     override suspend fun fetchChapters(sourceId: String, novelUrl: String): List<Chapter> = CompositeSourceCatalog(delegates()).fetchChapters(sourceId, novelUrl)

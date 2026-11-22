@@ -42,6 +42,8 @@ interface NovelRepository {
 
 interface SourceCatalog {
     fun availableSources(): List<SourceDescriptor>
+    /** Suspending variant for catalogs that can only enumerate sources asynchronously (e.g. remote repositories). */
+    suspend fun availableSourcesAsync(): List<SourceDescriptor> = availableSources()
     suspend fun browse(sourceId: String, query: String = "", page: Int = 1): List<Novel>
     suspend fun fetchNovelDetails(sourceId: String, novelUrl: String): SourceNovel
     suspend fun fetchChapters(sourceId: String, novelUrl: String): List<Chapter>

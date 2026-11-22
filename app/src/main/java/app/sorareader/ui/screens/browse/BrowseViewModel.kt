@@ -31,10 +31,7 @@ class BrowseViewModel(
 
     fun refreshSources() {
         viewModelScope.launch {
-            val sources = runCatching {
-                val c = catalog
-                if (c is app.sorareader.data.source.RepositoryBackedSourceCatalog) c.availableSourcesAsync() else c.availableSources()
-            }.getOrElse { catalog.availableSources() }
+            val sources = runCatching { catalog.availableSourcesAsync() }.getOrElse { catalog.availableSources() }
             val selected = _state.value.selectedSourceId ?: sources.firstOrNull()?.id
             _state.value = _state.value.copy(sources = sources, selectedSourceId = selected)
             search()
