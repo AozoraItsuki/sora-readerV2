@@ -3,6 +3,7 @@ package app.sorareader.ui.screens.reader
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import app.sorareader.data.local.LocalBookFiles
 import app.sorareader.data.settings.AppSettingsStore
 import app.sorareader.data.settings.ReaderSettings
 import app.sorareader.domain.model.Chapter
@@ -111,9 +112,12 @@ class ReaderViewModel(
     }
 
     private suspend fun loadContent(chapter: Chapter, sourceId: String): ChapterContent {
-        chapter.contentPath?.let { path -> File(path).takeIf { it.exists() }?.let {
-            return ChapterContent(chapter.id, chapter.title, it.readLines().filter { l -> l.isNotBlank() })
-        } }
+        chapter.contentPath?.takeIf { it.isNotBlank() }?.let { path ->
+            // Local EPUB chapters are stored as sanitized HTML; legacy downloads are plain text.
+            LocalBookFiles.readContent(path, chapter.title)?.let { local ->
+                return local.copy(chapterId = chapter.id)
+            }
+        }
         val remote = catalog.fetchChapterContent(sourceId, chapter.url)
         val dir = File(appContext.filesDir, "downloads/${chapter.novelId}").also { it.mkdirs() }
         val file = File(dir, "${chapter.id}.txt")

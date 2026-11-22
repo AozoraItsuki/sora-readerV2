@@ -9,8 +9,10 @@ import app.sorareader.ui.screens.backup.BackupViewModel
 import app.sorareader.ui.screens.browse.BrowseViewModel
 import app.sorareader.ui.screens.categories.CategoriesViewModel
 import app.sorareader.ui.screens.downloads.DownloadsViewModel
+import app.sorareader.ui.screens.globalsearch.GlobalSearchViewModel
 import app.sorareader.ui.screens.history.HistoryViewModel
 import app.sorareader.ui.screens.library.LibraryViewModel
+import app.sorareader.ui.screens.localbooks.LocalBooksViewModel
 import app.sorareader.ui.screens.novel.NovelDetailViewModel
 import app.sorareader.ui.screens.plugins.PluginsViewModel
 import app.sorareader.ui.screens.reader.ReaderViewModel
@@ -23,7 +25,9 @@ object AppViewModelProvider {
     val Factory = viewModelFactory {
         initializer { LibraryViewModel(app().container.novelRepository) }
         initializer { BrowseViewModel(app().container.novelRepository, app().container.sourceCatalog) }
-        initializer { NovelDetailViewModel(app().container.novelRepository, app().container.sourceCatalog, app().container.downloadManager) }
+        initializer { GlobalSearchViewModel(app().container.novelRepository, app().container.sourceCatalog) }
+        initializer { NovelDetailViewModel(app().container.novelRepository, app().container.sourceCatalog, app().container.downloadManager, app().container.localBookManager) }
+        initializer { LocalBooksViewModel(app().container.novelRepository, app().container.localBookManager) }
         initializer { ReaderViewModel(app().container.novelRepository, app().container.sourceCatalog, app().applicationContext, app().container.settings) }
         initializer { HistoryViewModel(app().container.novelRepository) }
         initializer { UpdatesViewModel(app().container.novelRepository) }

@@ -31,13 +31,16 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navDeepLink
 import androidx.navigation.toRoute
 import app.sorareader.data.settings.AppPreferences
 import app.sorareader.data.settings.ThemeMode
 import app.sorareader.ui.navigation.BackupRoute
 import app.sorareader.ui.navigation.BrowseRoute
+import app.sorareader.ui.navigation.GlobalSearchRoute
 import app.sorareader.ui.navigation.HistoryRoute
 import app.sorareader.ui.navigation.LibraryRoute
+import app.sorareader.ui.navigation.LocalBooksRoute
 import app.sorareader.ui.navigation.MoreRoute
 import app.sorareader.ui.navigation.NovelRoute
 import app.sorareader.ui.navigation.PluginsRoute
@@ -51,8 +54,10 @@ import app.sorareader.ui.navigation.SettingsRoute
 import app.sorareader.ui.navigation.UpdatesRoute
 import app.sorareader.ui.screens.backup.BackupScreen
 import app.sorareader.ui.screens.browse.BrowseScreen
+import app.sorareader.ui.screens.globalsearch.GlobalSearchScreen
 import app.sorareader.ui.screens.history.HistoryScreen
 import app.sorareader.ui.screens.library.LibraryScreen
+import app.sorareader.ui.screens.localbooks.LocalBooksScreen
 import app.sorareader.ui.screens.more.MoreScreen
 import app.sorareader.ui.screens.novel.NovelDetailScreen
 import app.sorareader.ui.screens.reader.ReaderScreen
@@ -131,17 +136,46 @@ fun SoraReaderRoot() {
                 composable<LibraryRoute> { LibraryScreen(onOpenNovel = { navController.navigate(NovelRoute(it)) }) }
                 composable<UpdatesRoute> { UpdatesScreen(onOpenNovel = { navController.navigate(NovelRoute(it)) }) }
                 composable<HistoryRoute> { HistoryScreen(onOpenChapter = { novelId, chapterId -> navController.navigate(ReaderRoute(novelId, chapterId)) }) }
-                composable<BrowseRoute> { BrowseScreen(onOpenNovel = { navController.navigate(NovelRoute(it)) }) }
-                composable<MoreRoute> { MoreScreen(onOpenSettings = { navController.navigate(SettingsRoute) }, onOpenRepositories = { navController.navigate(RepositoriesRoute) }, onOpenPlugins = { navController.navigate(PluginsRoute) }, onOpenDownloads = { navController.navigate(DownloadsRoute) }, onOpenCategories = { navController.navigate(CategoriesRoute) }, onOpenAbout = { navController.navigate(AboutRoute) }, onOpenStats = { navController.navigate(StatsRoute) }, onOpenBackup = { navController.navigate(BackupRoute) }) }
+                composable<BrowseRoute> {
+                    BrowseScreen(
+                        onOpenNovel = { navController.navigate(NovelRoute(it)) },
+                        onOpenGlobalSearch = { navController.navigate(GlobalSearchRoute) },
+                    )
+                }
+                composable<GlobalSearchRoute> {
+                    GlobalSearchScreen(
+                        onOpenNovel = { navController.navigate(NovelRoute(it)) },
+                        onBack = { navController.popBackStack() },
+                    )
+                }
+                composable<MoreRoute> {
+                    MoreScreen(
+                        onOpenSettings = { navController.navigate(SettingsRoute) },
+                        onOpenRepositories = { navController.navigate(RepositoriesRoute) },
+                        onOpenPlugins = { navController.navigate(PluginsRoute) },
+                        onOpenDownloads = { navController.navigate(DownloadsRoute) },
+                        onOpenCategories = { navController.navigate(CategoriesRoute) },
+                        onOpenAbout = { navController.navigate(AboutRoute) },
+                        onOpenStats = { navController.navigate(StatsRoute) },
+                        onOpenBackup = { navController.navigate(BackupRoute) },
+                        onOpenLocalBooks = { navController.navigate(LocalBooksRoute) },
+                    )
+                }
                 composable<DownloadsRoute> { DownloadsScreen(onBack = { navController.popBackStack() }) }
                 composable<CategoriesRoute> { CategoriesScreen(onBack = { navController.popBackStack() }) }
                 composable<AboutRoute> { AboutScreen(onBack = { navController.popBackStack() }) }
                 composable<StatsRoute> { StatsScreen(onBack = { navController.popBackStack() }) }
                 composable<BackupRoute> { BackupScreen(onBack = { navController.popBackStack() }) }
+                composable<LocalBooksRoute> { LocalBooksScreen(onBack = { navController.popBackStack() }) }
                 composable<SettingsRoute> { SettingsScreen(onBack = { navController.popBackStack() }) }
                 composable<RepositoriesRoute> { RepositoriesScreen(onBack = { navController.popBackStack() }) }
                 composable<PluginsRoute> { PluginsScreen(onBack = { navController.popBackStack() }) }
-                composable<NovelRoute> { entry ->
+                composable<NovelRoute>(
+                    deepLinks = listOf(
+                        navDeepLink { uriPattern = "sorareader://novel?id={novelId}" },
+                        navDeepLink { uriPattern = "sorareader://novel/{novelId}" },
+                    ),
+                ) { entry ->
                     val route = entry.toRoute<NovelRoute>()
                     NovelDetailScreen(novelId = route.novelId, onBack = { navController.popBackStack() }, onOpenChapter = { navController.navigate(ReaderRoute(route.novelId, it)) })
                 }

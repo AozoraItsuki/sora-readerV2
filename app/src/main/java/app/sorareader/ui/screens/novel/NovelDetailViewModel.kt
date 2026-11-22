@@ -1,7 +1,10 @@
 package app.sorareader.ui.screens.novel
 
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import app.sorareader.domain.local.EpubExportResult
+import app.sorareader.domain.local.LocalBookManager
 import app.sorareader.domain.model.Chapter
 import app.sorareader.domain.model.Novel
 import app.sorareader.domain.repository.NovelRepository
@@ -24,12 +27,14 @@ data class NovelDetailUiState(
     val chapters: List<Chapter> = emptyList(),
     val loading: Boolean = false,
     val error: String? = null,
+    val notice: String? = null,
 )
 
 class NovelDetailViewModel(
     private val repo: NovelRepository,
     private val catalog: SourceCatalog,
     private val downloads: DownloadManager,
+    private val localBookManager: LocalBookManager,
 ) : ViewModel() {
     private val _state = MutableStateFlow(NovelDetailUiState())
     val state: StateFlow<NovelDetailUiState> = _state.asStateFlow()
@@ -121,4 +126,16 @@ class NovelDetailViewModel(
         val novel = _state.value.novel ?: return
         viewModelScope.launch { repo.setNovelCategories(novel.id, _state.value.selectedCategoryIds); _state.value = _state.value.copy(showCategoryDialog = false) }
     }
+
+    fun exportEpub(uri: Uri) {
+        val novel = _state.value.novel ?: return
+        viewModelScope.launch {
+            when (val result = localBookManager.exportEpub(novel.id, uri)) {
+                is EpubExportResult.Success -> _state.value = _state.value.copy(notice = result.summary, error = null)
+                is EpubExportResult.Failure -> _state.value = _state.value.copy(error = result.message, notice = null)
+            }
+        }
+    }
+
+    fun clearNotice() { _state.value = _state.value.copy(notice = null) }
 }

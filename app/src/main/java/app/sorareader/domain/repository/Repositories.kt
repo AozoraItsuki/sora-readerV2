@@ -21,6 +21,7 @@ interface NovelRepository {
     fun observeHistory(): Flow<List<HistoryEntry>>
     fun observeDownloaded(): Flow<List<Chapter>>
     suspend fun getNovelById(id: Long): Novel?
+    suspend fun getNovelBySourceUrl(sourceId: String, url: String): Novel?
     suspend fun getChapterById(id: Long): Chapter?
     suspend fun getChapters(novelId: Long): List<Chapter>
     suspend fun getFirstUnread(novelId: Long): Chapter?

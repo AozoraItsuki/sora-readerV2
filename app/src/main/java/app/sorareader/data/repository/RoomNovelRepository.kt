@@ -35,6 +35,8 @@ class RoomNovelRepository(db: SoraDatabase) : NovelRepository {
     }
 
     override suspend fun getNovelById(id: Long): Novel? = novels.getById(id)?.toDomain()
+    override suspend fun getNovelBySourceUrl(sourceId: String, url: String): Novel? =
+        novels.getBySourceUrl(sourceId, url)?.toDomain()
     override suspend fun getChapterById(id: Long): Chapter? = chapters.getById(id)?.toDomain()
     override suspend fun getChapters(novelId: Long): List<Chapter> = chapters.getByNovel(novelId).map { it.toDomain() }
     override suspend fun getFirstUnread(novelId: Long): Chapter? = chapters.getFirstUnread(novelId)?.toDomain()

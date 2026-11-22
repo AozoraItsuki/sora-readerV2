@@ -18,6 +18,7 @@ class RepositoryBackedSourceCatalog(
     private val json: Json = Json { ignoreUnknownKeys = true },
     private val builtIn: SourceCatalog = SimpleSourceCatalog(),
     private val pluginCatalog: SourceCatalog? = null,
+    private val localCatalog: SourceCatalog? = null,
 ) : SourceCatalog {
     private suspend fun delegates(): List<SourceCatalog> {
         val repos = repositoryStore.observeRepositories().first().filter { it.enabled }
@@ -25,11 +26,15 @@ class RepositoryBackedSourceCatalog(
         return buildList {
             add(builtIn)
             pluginCatalog?.let { add(it) }
+            localCatalog?.let { add(it) }
             addAll(remotes)
         }
     }
 
-    override fun availableSources(): List<SourceDescriptor> = builtIn.availableSources()
+    override fun availableSources(): List<SourceDescriptor> = buildList {
+        addAll(builtIn.availableSources())
+        localCatalog?.let { addAll(it.availableSources()) }
+    }
     override suspend fun availableSourcesAsync(): List<SourceDescriptor> = CompositeSourceCatalog(delegates()).availableSourcesAsync()
     override suspend fun browse(sourceId: String, query: String, page: Int): List<Novel> = CompositeSourceCatalog(delegates()).browse(sourceId, query, page)
     override suspend fun fetchNovelDetails(sourceId: String, novelUrl: String): SourceNovel = CompositeSourceCatalog(delegates()).fetchNovelDetails(sourceId, novelUrl)

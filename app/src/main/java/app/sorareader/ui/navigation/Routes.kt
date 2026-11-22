@@ -6,6 +6,7 @@ import kotlinx.serialization.Serializable
 @Serializable object UpdatesRoute
 @Serializable object HistoryRoute
 @Serializable object BrowseRoute
+@Serializable object GlobalSearchRoute
 @Serializable object MoreRoute
 
 @Serializable object SettingsRoute
@@ -16,6 +17,7 @@ import kotlinx.serialization.Serializable
 @Serializable object AboutRoute
 @Serializable object StatsRoute
 @Serializable object BackupRoute
+@Serializable object LocalBooksRoute
 
 @Serializable data class NovelRoute(val novelId: Long)
 @Serializable data class ReaderRoute(val novelId: Long, val chapterId: Long)

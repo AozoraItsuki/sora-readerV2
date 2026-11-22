@@ -1,5 +1,8 @@
 package app.sorareader.ui.screens.novel
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -63,6 +66,9 @@ fun NovelDetailScreen(novelId: Long, onBack: () -> Unit, onOpenChapter: (Long) -
     val state by vm.state.collectAsStateWithLifecycle()
     val novel = state.novel
     var moreExpanded by remember { mutableStateOf(false) }
+    val exportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/epub+zip"),
+    ) { uri: Uri? -> if (uri != null) vm.exportEpub(uri) }
     Scaffold(topBar = {
         TopAppBar(
             title = { Text(novel?.title ?: "Novel", maxLines = 1) },
@@ -77,6 +83,14 @@ fun NovelDetailScreen(novelId: Long, onBack: () -> Unit, onOpenChapter: (Long) -
                     DropdownMenu(expanded = moreExpanded, onDismissRequest = { moreExpanded = false }) {
                         DropdownMenuItem(text = { Text("Mark all read") }, onClick = { vm.markAllRead(true); moreExpanded = false })
                         DropdownMenuItem(text = { Text("Mark all unread") }, onClick = { vm.markAllUnread(); moreExpanded = false })
+                        DropdownMenuItem(
+                            text = { Text("Export as EPUB") },
+                            enabled = novel != null,
+                            onClick = {
+                                moreExpanded = false
+                                novel?.let { exportLauncher.launch(safeEpubName(it.title)) }
+                            },
+                        )
                     }
                 }
             },
@@ -85,6 +99,7 @@ fun NovelDetailScreen(novelId: Long, onBack: () -> Unit, onOpenChapter: (Long) -
         LazyColumn(Modifier.fillMaxSize().padding(inner), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             if (state.loading) item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
             state.error?.let { msg -> item { Text(msg, color = MaterialTheme.colorScheme.error) } }
+            state.notice?.let { msg -> item { Text(msg, color = MaterialTheme.colorScheme.primary) } }
             if (novel != null) {
                 item {
                     Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -151,6 +166,11 @@ fun NovelDetailScreen(novelId: Long, onBack: () -> Unit, onOpenChapter: (Long) -
     if (state.showCategoryDialog) {
         CategoryPickerDialog(categories = state.categories, selected = state.selectedCategoryIds, onToggle = vm::toggleCategory, onDismiss = vm::dismissCategories, onConfirm = vm::saveCategories)
     }
+}
+
+private fun safeEpubName(title: String): String {
+    val cleaned = title.trim().replace(Regex("[^A-Za-z0-9._-]+"), "_").trim('_')
+    return cleaned.ifBlank { "novel" }.take(80) + ".epub"
 }
 
 @Composable
