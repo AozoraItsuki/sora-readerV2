@@ -19,4 +19,8 @@ class SettingsViewModel(private val store: AppSettingsStore) : ViewModel() {
     fun setWifiOnly(v: Boolean) = viewModelScope.launch { store.setWifiOnly(v) }
     fun setFontSize(v: Float) = viewModelScope.launch { store.setFontSize(v) }
     fun setLineHeight(v: Float) = viewModelScope.launch { store.setLineHeight(v) }
+    fun setPadding(v: Int) = viewModelScope.launch { store.setPadding(v) }
+    fun setKeepScreenOn(v: Boolean) = viewModelScope.launch { store.setKeepScreenOn(v) }
+    fun setFullscreen(v: Boolean) = viewModelScope.launch { store.setFullscreen(v) }
+    fun setTheme(v: String) = viewModelScope.launch { store.setTheme(v) }
 }

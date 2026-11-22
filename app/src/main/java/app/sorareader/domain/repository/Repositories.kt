@@ -6,6 +6,7 @@ import app.sorareader.domain.model.ChapterContent
 import app.sorareader.domain.model.DownloadTask
 import app.sorareader.domain.model.HistoryEntry
 import app.sorareader.domain.model.Novel
+import app.sorareader.domain.model.NovelCategory
 import app.sorareader.domain.model.Repository
 import app.sorareader.domain.model.SourceDescriptor
 import app.sorareader.domain.model.SourceNovel
@@ -16,6 +17,7 @@ interface NovelRepository {
     fun observeNovel(novelId: Long): Flow<Novel?>
     fun observeChapters(novelId: Long): Flow<List<Chapter>>
     fun observeCategories(): Flow<List<Category>>
+    fun observeNovelCategories(): Flow<List<NovelCategory>>
     fun observeHistory(): Flow<List<HistoryEntry>>
     fun observeDownloaded(): Flow<List<Chapter>>
     suspend fun getNovelById(id: Long): Novel?

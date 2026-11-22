@@ -33,16 +33,35 @@ fun UpdatesScreen(onOpenNovel: (Long) -> Unit, vm: UpdatesViewModel = viewModel(
         if (updates.isEmpty()) {
             Column(Modifier.fillMaxSize().padding(inner).padding(24.dp), verticalArrangement = Arrangement.Center) {
                 Text("No updates yet", style = MaterialTheme.typography.headlineSmall)
-                Text("Novels in your library will appear here when updated.", style = MaterialTheme.typography.bodyMedium)
+                Text("Novels with unread chapters or recent updates appear here.", style = MaterialTheme.typography.bodyMedium)
             }
         } else {
             LazyColumn(Modifier.fillMaxSize().padding(inner), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                item {
+                    Text(
+                        "Unread chapters and recent updates from your library",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(bottom = 4.dp),
+                    )
+                }
                 items(updates, key = { it.id }) { novel ->
                     Card(Modifier.fillMaxWidth().clickable { onOpenNovel(novel.id) }) {
                         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Text(novel.title, style = MaterialTheme.typography.titleMedium)
-                            novel.lastUpdatedAt?.let { Text(DateFormat.getDateTimeInstance().format(Date(it)), style = MaterialTheme.typography.labelSmall) }
-                            Text("${novel.chaptersUnread} unread chapters", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                            Text(
+                                text = buildString {
+                                    if (novel.chaptersUnread > 0) {
+                                        append("${novel.chaptersUnread} unread chapter${if (novel.chaptersUnread == 1) "" else "s"}")
+                                    }
+                                    novel.lastUpdatedAt?.let { ts ->
+                                        if (length > 0) append(" • ")
+                                        append("Updated ").append(DateFormat.getDateTimeInstance().format(Date(ts)))
+                                    }
+                                },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
                         }
                     }
                 }

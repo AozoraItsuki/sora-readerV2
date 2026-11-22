@@ -41,7 +41,7 @@ class AppContainer(context: Context) {
     val sourceCatalog: SourceCatalog = RepositoryBackedSourceCatalog(repositoryStore, httpClient, json, SimpleSourceCatalog())
     val settings: AppSettingsStore = AppSettingsStore(context.applicationContext)
     val backupManager: BackupManager = BackupManagerImpl(context.applicationContext, database, novelRepository, settings)
-    val downloadManager: DownloadManager = SimpleDownloadManager(context.applicationContext).also { SimpleDownloadManager.instance = it }
+    val downloadManager: DownloadManager = SimpleDownloadManager(context.applicationContext, settings).also { SimpleDownloadManager.instance = it }
 
     init {
         scope.launch { database.categoryDao().ensureDefault() }

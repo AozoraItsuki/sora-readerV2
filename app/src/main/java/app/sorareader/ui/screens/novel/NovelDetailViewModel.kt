@@ -7,8 +7,11 @@ import app.sorareader.domain.model.Novel
 import app.sorareader.domain.repository.NovelRepository
 import app.sorareader.domain.repository.DownloadManager
 import app.sorareader.domain.repository.SourceCatalog
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -30,6 +33,9 @@ class NovelDetailViewModel(
 ) : ViewModel() {
     private val _state = MutableStateFlow(NovelDetailUiState())
     val state: StateFlow<NovelDetailUiState> = _state.asStateFlow()
+
+    private val _continueChapter = MutableSharedFlow<Long>(extraBufferCapacity = 1)
+    val continueChapter: SharedFlow<Long> = _continueChapter.asSharedFlow()
 
     fun load(novelId: Long) {
         viewModelScope.launch { repo.observeNovel(novelId).collectLatest { _state.value = _state.value.copy(novel = it) } }
@@ -68,6 +74,31 @@ class NovelDetailViewModel(
     fun markAllRead(read: Boolean) {
         val novel = _state.value.novel ?: return
         viewModelScope.launch { repo.markNovelRead(novel.id, read) }
+    }
+
+    fun markAllUnread() = markAllRead(false)
+
+    /** Resumes at the first unread chapter, falling back to the last read (or first) chapter. */
+    fun continueReading() {
+        val novel = _state.value.novel ?: return
+        viewModelScope.launch {
+            val chapters = _state.value.chapters
+            val target = repo.getFirstUnread(novel.id)
+                ?: chapters.lastOrNull { it.isRead || it.readProgress > 0f }
+                ?: chapters.firstOrNull()
+            if (target != null && target.id != 0L) _continueChapter.emit(target.id)
+        }
+    }
+
+    fun toggleBookmark(chapterId: Long, bookmarked: Boolean) {
+        viewModelScope.launch { repo.toggleBookmark(chapterId, bookmarked) }
+    }
+
+    fun downloadChapter(chapterId: Long) {
+        val novel = _state.value.novel ?: return
+        val chapter = _state.value.chapters.firstOrNull { it.id == chapterId } ?: return
+        if (chapter.id == 0L || chapter.isDownloaded) return
+        viewModelScope.launch { downloads.enqueue(novel, listOf(chapter)) }
     }
 
     fun downloadUnread() {

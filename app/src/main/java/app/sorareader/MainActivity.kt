@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.LibraryBooks
@@ -19,6 +20,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.compose.NavHost
@@ -26,6 +28,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
+import app.sorareader.data.settings.AppPreferences
+import app.sorareader.data.settings.ThemeMode
 import app.sorareader.ui.navigation.BackupRoute
 import app.sorareader.ui.navigation.BrowseRoute
 import app.sorareader.ui.navigation.HistoryRoute
@@ -60,7 +64,20 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        setContent { SoraReaderTheme { SoraReaderRoot() } }
+        val settings = (application as SoraReaderApp).container.settings
+        setContent {
+            val prefs by settings.observe().collectAsStateWithLifecycle(initialValue = AppPreferences())
+            val darkTheme = when {
+                prefs.reader.theme.equals(ThemeMode.LIGHT, ignoreCase = true) -> false
+                prefs.reader.theme.equals(ThemeMode.DARK, ignoreCase = true) -> true
+                else -> isSystemInDarkTheme()
+            }
+            SoraReaderTheme(
+                darkTheme = darkTheme,
+                dynamicColor = prefs.dynamicColor,
+                amoled = prefs.amoled,
+            ) { SoraReaderRoot() }
+        }
     }
 }
 

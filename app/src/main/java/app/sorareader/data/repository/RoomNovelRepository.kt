@@ -10,6 +10,7 @@ import app.sorareader.domain.model.Category
 import app.sorareader.domain.model.Chapter
 import app.sorareader.domain.model.HistoryEntry
 import app.sorareader.domain.model.Novel
+import app.sorareader.domain.model.NovelCategory
 import app.sorareader.domain.repository.NovelRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -26,6 +27,8 @@ class RoomNovelRepository(db: SoraDatabase) : NovelRepository {
     override fun observeNovel(novelId: Long): Flow<Novel?> = novels.observeById(novelId).map { it?.toDomain() }
     override fun observeChapters(novelId: Long): Flow<List<Chapter>> = chapters.observeByNovel(novelId).map { it.map { e -> e.toDomain() } }
     override fun observeCategories(): Flow<List<Category>> = categories.observeAll().map { it.map { e -> e.toDomain() } }
+    override fun observeNovelCategories(): Flow<List<NovelCategory>> = categories.observeNovelCategories()
+        .map { it.map { link -> NovelCategory(link.novelId, link.categoryId) } }
     override fun observeDownloaded(): Flow<List<Chapter>> = chapters.observeAllDownloaded().map { it.map { e -> e.toDomain() } }
     override fun observeHistory(): Flow<List<HistoryEntry>> = history.observeHistory().map { rows ->
         rows.map { HistoryEntry(it.chapterId, it.novelId, it.novelTitle, it.novelCover, it.chapterTitle, it.chapterNumber, it.readAt, it.readProgress, it.sourceId, it.novelUrl) }

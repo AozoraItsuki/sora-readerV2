@@ -11,6 +11,12 @@ import kotlinx.coroutines.flow.stateIn
 
 class UpdatesViewModel(repo: NovelRepository) : ViewModel() {
     val updates: StateFlow<List<Novel>> = repo.observeLibrary()
-        .map { list -> list.filter { it.lastUpdatedAt != null }.sortedByDescending { it.lastUpdatedAt } }
+        .map { list ->
+            list.filter { it.chaptersUnread > 0 || it.lastUpdatedAt != null }
+                .sortedWith(
+                    compareByDescending<Novel> { it.chaptersUnread > 0 }
+                        .thenByDescending { it.lastUpdatedAt ?: 0L }
+                )
+        }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 }

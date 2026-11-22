@@ -13,6 +13,13 @@ import kotlinx.serialization.Serializable
 
 private val Context.dataStore by preferencesDataStore("sora_settings")
 
+/** Stored values for the app/reader theme mode selector. */
+object ThemeMode {
+    const val SYSTEM = "system"
+    const val LIGHT = "light"
+    const val DARK = "dark"
+}
+
 @Serializable
 data class ReaderSettings(
     val fontSize: Float = 16f,
@@ -20,7 +27,7 @@ data class ReaderSettings(
     val padding: Int = 16,
     val keepScreenOn: Boolean = true,
     val fullscreen: Boolean = true,
-    val theme: String = "system",
+    val theme: String = ThemeMode.SYSTEM,
 )
 
 @Serializable
@@ -61,7 +68,7 @@ class AppSettingsStore(private val context: Context) {
                 padding = p[K.padding] ?: 16,
                 keepScreenOn = p[K.keepScreenOn] ?: true,
                 fullscreen = p[K.fullscreen] ?: true,
-                theme = p[K.readerTheme] ?: "system",
+                theme = p[K.readerTheme] ?: ThemeMode.SYSTEM,
             ),
         )
     }
@@ -72,6 +79,10 @@ class AppSettingsStore(private val context: Context) {
     suspend fun setWifiOnly(v: Boolean) = context.dataStore.edit { it[K.wifiOnly] = v }
     suspend fun setFontSize(v: Float) = context.dataStore.edit { it[K.fontSize] = v }
     suspend fun setLineHeight(v: Float) = context.dataStore.edit { it[K.lineHeight] = v }
+    suspend fun setPadding(v: Int) = context.dataStore.edit { it[K.padding] = v }
+    suspend fun setKeepScreenOn(v: Boolean) = context.dataStore.edit { it[K.keepScreenOn] = v }
+    suspend fun setFullscreen(v: Boolean) = context.dataStore.edit { it[K.fullscreen] = v }
+    suspend fun setTheme(v: String) = context.dataStore.edit { it[K.readerTheme] = v }
 
     /** Restore a full preferences snapshot in one write (used by backup import). */
     suspend fun restore(p: AppPreferences) = context.dataStore.edit { prefs ->

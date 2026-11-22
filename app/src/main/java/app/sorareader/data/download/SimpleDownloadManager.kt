@@ -8,6 +8,7 @@ import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
+import app.sorareader.data.settings.AppSettingsStore
 import app.sorareader.domain.model.Chapter
 import app.sorareader.domain.model.DownloadStatus
 import app.sorareader.domain.model.DownloadTask
@@ -19,6 +20,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.decodeFromString
@@ -27,7 +29,10 @@ import kotlinx.serialization.json.Json
 import java.io.File
 import java.util.UUID
 
-class SimpleDownloadManager(private val context: Context) : DownloadManager {
+class SimpleDownloadManager(
+    private val context: Context,
+    private val settings: AppSettingsStore,
+) : DownloadManager {
     private val tasks = MutableStateFlow<List<DownloadTask>>(emptyList())
     private val queueFile = File(context.applicationContext.filesDir, QUEUE_FILE_NAME)
     private val json = Json { ignoreUnknownKeys = true }
@@ -45,6 +50,10 @@ class SimpleDownloadManager(private val context: Context) : DownloadManager {
     override fun observeQueue(): Flow<List<DownloadTask>> = tasks.asStateFlow()
 
     override suspend fun enqueue(novel: Novel, chapters: List<Chapter>) {
+        // Read the current preference at enqueue time so WorkManager waits for an
+        // unmetered (Wi-Fi) connection when the user requested Wi-Fi-only downloads.
+        val wifiOnly = runCatching { settings.preferences.first().wifiOnlyDownloads }.getOrDefault(true)
+        val networkType = if (wifiOnly) NetworkType.UNMETERED else NetworkType.CONNECTED
         val newTasks = chapters.map { chapter ->
             DownloadTask(
                 id = UUID.randomUUID().toString(),
@@ -70,7 +79,7 @@ class SimpleDownloadManager(private val context: Context) : DownloadManager {
                         .putString("taskId", task.id)
                         .build()
                 )
-                .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
+                .setConstraints(Constraints.Builder().setRequiredNetworkType(networkType).build())
                 .build()
             wm.enqueueUniqueWork("download-${chapters[index].id}", ExistingWorkPolicy.KEEP, req)
         }

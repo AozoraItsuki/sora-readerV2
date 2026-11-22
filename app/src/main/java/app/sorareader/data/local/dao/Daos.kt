@@ -147,6 +147,10 @@ interface CategoryDao {
     @Query("SELECT * FROM novel_categories ORDER BY novelId ASC, categoryId ASC")
     suspend fun getAllNovelCategories(): List<NovelCategoryEntity>
 
+    /** Observed novel/category links, used for filtering the library by category. */
+    @Query("SELECT novelId, categoryId FROM novel_categories")
+    fun observeNovelCategories(): Flow<List<NovelCategoryEntity>>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertNovelCategory(nc: NovelCategoryEntity)
 
