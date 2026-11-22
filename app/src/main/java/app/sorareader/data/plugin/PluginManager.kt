@@ -30,7 +30,12 @@ class PluginManager(
 
     suspend fun installFromUrl(url: String): InstalledPlugin = withContext(Dispatchers.IO) {
         mutex.withLock {
-            val code = client.newCall(Request.Builder().url(url).header("Cache-Control", "no-cache").build()).execute().use { resp ->
+            val code = client.newCall(
+                Request.Builder().url(bypassCache(url))
+                    .header("Cache-Control", "no-cache")
+                    .header("Pragma", "no-cache")
+                    .build(),
+            ).execute().use { resp ->
                 if (!resp.isSuccessful) error("Failed to download plugin: HTTP ${resp.code}")
                 resp.body?.string() ?: error("Empty plugin body")
             }
@@ -40,15 +45,47 @@ class PluginManager(
 
     suspend fun installFromCode(code: String, sourceUrl: String? = null): InstalledPlugin = withContext(Dispatchers.IO) {
         mutex.withLock {
-            val tempId = "temp_${System.currentTimeMillis()}"
-            runtime.loadPlugin(tempId, code)
-            val meta = runtime.getMeta(tempId) ?: error("Plugin did not expose valid metadata")
-            runtime.unloadPlugin(tempId)
+            val tempId = "temp_${System.nanoTime()}_${code.length}"
+            val meta = runCatching {
+                runtime.loadPlugin(tempId, code)
+                runtime.getMeta(tempId)
+            }.getOrElse { e ->
+                error("Plugin failed to load: ${e.message ?: "unknown error"}")
+            }.also { runtime.unloadPlugin(tempId) }
+                ?: error("Plugin did not expose valid metadata")
+
             val pluginId = meta.id.ifBlank { error("Plugin id is blank") }
-            val dir = File(pluginsDir, sanitize(pluginId)).also { it.mkdirs() }
-            File(dir, "index.js").writeText(code)
-            val installed = meta.copy(sourceUrl = sourceUrl, installedAt = System.currentTimeMillis())
+            if (pluginId == tempId || pluginId.startsWith("temp_")) {
+                error("Plugin did not declare a valid id")
+            }
             val index = readIndex()
+            val existing = index.plugins.firstOrNull { it.id == pluginId }
+
+            // Avoid downgrades when a version is advertised by both sides.
+            if (existing != null && existing.version.isNotBlank() &&
+                compareVersions(meta.version, existing.version) < 0
+            ) {
+                return@withLock existing
+            }
+
+            val installed = meta.copy(
+                sourceUrl = sourceUrl ?: existing?.sourceUrl,
+                customJS = meta.customJS ?: existing?.customJS,
+                customCSS = meta.customCSS ?: existing?.customCSS,
+                // Preserve install timestamp when reinstalling the same version.
+                installedAt = if (existing != null && meta.version == existing.version) {
+                    existing.installedAt
+                } else {
+                    System.currentTimeMillis()
+                },
+            )
+
+            val dir = File(pluginsDir, sanitize(pluginId)).also { it.mkdirs() }
+            val pluginFile = File(dir, "index.js")
+            // Reload so a reinstalled/updated plugin never serves stale code.
+            runtime.unloadPlugin(pluginId)
+            pluginFile.writeText(code)
+
             val updated = index.plugins.filterNot { it.id == pluginId } + installed
             writeIndex(PluginIndex(updated.sortedBy { it.name.lowercase() }))
             installed
@@ -82,20 +119,45 @@ class PluginManager(
         val dir = File(pluginsDir, sanitize(pluginId))
         val file = File(dir, "index.js")
         if (!file.exists()) error("Plugin not installed: $pluginId")
-        val code = file.readText()
-        runtime.loadPlugin(pluginId, code)
+        runtime.loadPlugin(pluginId, file.readText())
     }
 
     private fun readIndex(): PluginIndex {
         if (!indexFile.exists()) return PluginIndex()
-        return runCatching { json.decodeFromString(PluginIndex.serializer(), indexFile.readText()) }.getOrElse { PluginIndex() }
+        return runCatching { json.decodeFromString(PluginIndex.serializer(), indexFile.readText()) }
+            .getOrElse { PluginIndex() }
     }
 
     private fun writeIndex(index: PluginIndex) {
         indexFile.writeText(json.encodeToString(PluginIndex.serializer(), index))
     }
 
-    private fun sanitize(id: String): String = id.replace(Regex("[^a-zA-Z0-9._-]"), "_")
+    /** Directory-safe plugin id. Never allows traversal, hidden names or empty ids. */
+    private fun sanitize(id: String): String {
+        val cleaned = id.trim()
+            .replace(Regex("[^a-zA-Z0-9._-]"), "_")
+            .replace(Regex("\\.{2,}"), ".")
+            .trim('.', '_', '-')
+            .take(80)
+        return cleaned.ifBlank { "plugin_${(id.hashCode().toLong() and 0x7fffffffL).toString(16)}" }
+    }
+
+    private fun bypassCache(url: String): String =
+        if (url.contains('?')) "$url&t=${System.currentTimeMillis()}"
+        else "$url?t=${System.currentTimeMillis()}"
+
+    /** Numeric dot-version comparison; returns -1, 0 or 1. */
+    private fun compareVersions(a: String, b: String): Int {
+        val left = a.replace(Regex("[^0-9.]"), "").split('.').map { it.toIntOrNull() ?: 0 }
+        val right = b.replace(Regex("[^0-9.]"), "").split('.').map { it.toIntOrNull() ?: 0 }
+        for (i in 0 until maxOf(left.size, right.size)) {
+            val l = left.getOrElse(i) { 0 }
+            val r = right.getOrElse(i) { 0 }
+            if (l < r) return -1
+            if (l > r) return 1
+        }
+        return 0
+    }
 
     fun close() { runtime.close() }
 }

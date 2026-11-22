@@ -3,6 +3,7 @@ package app.sorareader.data.plugin
 import app.sorareader.domain.model.NovelStatus
 import app.sorareader.domain.model.SourceDescriptor
 import kotlinx.serialization.Serializable
+import java.util.Locale
 
 @Serializable
 data class InstalledPlugin(
@@ -12,6 +13,9 @@ data class InstalledPlugin(
     val lang: String = "en",
     val version: String = "1.0.0",
     val iconUrl: String? = null,
+    /** Optional repository-provided custom script/stylesheet URLs. */
+    val customJS: String? = null,
+    val customCSS: String? = null,
     val sourceUrl: String? = null,
     val hasSettings: Boolean = false,
     val installedAt: Long = System.currentTimeMillis(),
@@ -58,12 +62,24 @@ data class PluginSourceNovel(
     val totalPages: Int = 1,
 )
 
-fun parsePluginNovelStatus(raw: String?): NovelStatus = when (raw?.trim()?.lowercase()) {
-    "ongoing" -> NovelStatus.ONGOING
-    "completed" -> NovelStatus.COMPLETED
-    "licensed" -> NovelStatus.LICENSED
-    "publishing finished" -> NovelStatus.PUBLISHING_FINISHED
-    "cancelled", "canceled" -> NovelStatus.CANCELLED
-    "on hiatus", "hiatus" -> NovelStatus.ON_HIATUS
-    else -> NovelStatus.UNKNOWN
+/**
+ * Tolerant mapping of the legacy `@libs/novelStatus` string values (and the
+ * common spelling variants plugins use) onto the app's status enum.
+ */
+fun parsePluginNovelStatus(raw: String?): NovelStatus {
+    if (raw.isNullOrBlank()) return NovelStatus.UNKNOWN
+    val key = raw.trim()
+        // Some plugins stringify the enum: "NovelStatus.Completed".
+        .substringAfterLast('.')
+        .lowercase(Locale.ROOT)
+        .replace(Regex("[\\s_\\-]+"), "")
+    return when (key) {
+        "ongoing", "ongoingseries", "publishing", "inprogress" -> NovelStatus.ONGOING
+        "completed", "complete", "finished" -> NovelStatus.COMPLETED
+        "licensed" -> NovelStatus.LICENSED
+        "publishingfinished" -> NovelStatus.PUBLISHING_FINISHED
+        "cancelled", "canceled" -> NovelStatus.CANCELLED
+        "onhiatus", "hiatus" -> NovelStatus.ON_HIATUS
+        else -> NovelStatus.UNKNOWN
+    }
 }

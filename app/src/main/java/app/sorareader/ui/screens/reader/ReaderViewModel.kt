@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import app.sorareader.data.local.LocalBookFiles
 import app.sorareader.data.settings.AppSettingsStore
 import app.sorareader.data.settings.ReaderSettings
+import app.sorareader.data.settings.ThemeMode
 import app.sorareader.domain.model.Chapter
 import app.sorareader.domain.model.ChapterContent
 import app.sorareader.domain.repository.NovelRepository
@@ -29,9 +30,12 @@ data class ReaderUiState(
     val fontSize: Float = 16f,
     val lineHeight: Float = 1.6f,
     val padding: Int = 16,
+    val readerTheme: String = ThemeMode.SYSTEM,
     val keepScreenOn: Boolean = true,
     val fullscreen: Boolean = true,
     val incognito: Boolean = false,
+    /** Character offset reported by the WebView; foundation for position restore. */
+    val chapterPosition: Int = 0,
     val prevChapterId: Long? = null,
     val nextChapterId: Long? = null,
 )
@@ -61,6 +65,7 @@ class ReaderViewModel(
                     fontSize = prefs.reader.fontSize,
                     lineHeight = prefs.reader.lineHeight,
                     padding = prefs.reader.padding,
+                    readerTheme = prefs.reader.theme,
                     keepScreenOn = prefs.reader.keepScreenOn,
                     fullscreen = prefs.reader.fullscreen,
                     incognito = prefs.incognito,
@@ -79,6 +84,7 @@ class ReaderViewModel(
                 error = null,
                 chapter = null,
                 content = null,
+                chapterPosition = 0,
                 prevChapterId = null,
                 nextChapterId = null,
             )
@@ -140,6 +146,32 @@ class ReaderViewModel(
         }
     }
 
+    /**
+     * Bridge entry point for an explicit page save. `charOffset` is the text-node offset at the
+     * viewport anchor (legacy parity); it is kept in state so it can later drive position restore.
+     */
+    fun onSaveProgress(progress: Float, charOffset: Int) {
+        _state.value = _state.value.copy(chapterPosition = charOffset.coerceAtLeast(0))
+        onProgress(progress)
+    }
+
+    /** Scroll-form of progress reporting used by the bridge. */
+    fun onScroll(progress: Float) = onProgress(progress)
+
+    /** Paged-form of progress reporting used by the bridge. */
+    fun onPage(index: Int, total: Int) {
+        if (total <= 0) return
+        onProgress(((index + 1).toFloat() / total).coerceIn(0f, 1f))
+    }
+
+    /** Toggle the current chapter's bookmark from the reader bridge or overlay. */
+    fun toggleBookmark() {
+        val chapter = _state.value.chapter ?: return
+        val next = !chapter.isBookmarked
+        _state.value = _state.value.copy(chapter = chapter.copy(isBookmarked = next))
+        viewModelScope.launch { runCatching { repo.toggleBookmark(chapter.id, next) } }
+    }
+
     /** Flush immediately (called from the screen's DisposableEffect and before switching chapters). */
     fun saveProgress() {
         saveJob?.cancel()
@@ -175,6 +207,25 @@ class ReaderViewModel(
         viewModelScope.launch { settings.setLineHeight(next) }
     }
 
+    fun adjustPadding(delta: Int) {
+        val next = (readerSettings.padding + delta).coerceIn(MIN_PADDING, MAX_PADDING)
+        readerSettings = readerSettings.copy(padding = next)
+        _state.value = _state.value.copy(padding = next)
+        viewModelScope.launch { settings.setPadding(next) }
+    }
+
+    /** Quick theme switch from the reader overlay; persisted through the normal settings store. */
+    fun toggleReaderTheme() {
+        val next = if (readerSettings.theme.equals(ThemeMode.DARK, ignoreCase = true)) {
+            ThemeMode.LIGHT
+        } else {
+            ThemeMode.DARK
+        }
+        readerSettings = readerSettings.copy(theme = next)
+        _state.value = _state.value.copy(readerTheme = next)
+        viewModelScope.launch { settings.setTheme(next) }
+    }
+
     override fun onCleared() {
         saveJob?.cancel()
         val chapterId = _state.value.chapter?.id
@@ -199,5 +250,7 @@ class ReaderViewModel(
         private const val MAX_FONT_SIZE = 40f
         private const val MIN_LINE_HEIGHT = 1.0f
         private const val MAX_LINE_HEIGHT = 2.5f
+        private const val MIN_PADDING = 0
+        private const val MAX_PADDING = 48
     }
 }
