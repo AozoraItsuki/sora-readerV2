@@ -284,7 +284,7 @@ function __sora_matchToken(html, token) {
   m = token.match(/\.([a-zA-Z0-9_-]+)/); if (m) cls = m[1];
   m = token.match(/#([a-zA-Z0-9_-]+)/); if (m) id = m[1];
   m = token.match(/\[([a-zA-Z0-9_-]+)(?:=["']?([^"'\]]+)["']?)?\]/); if (m) { attrName = m[1]; attrVal = m[2]; }
-  const tagPattern = tag === '*' ? '[a-zA-Z0-9]+' : tag.replace(/[.*+?^${}()|[\]\\]/g, '\\${'$'}&');
+  const tagPattern = tag === '*' ? '[a-zA-Z0-9]+' : tag.replace(/[.*+?^${'$'}{}()|[\]\\]/g, '\\$&');
   const re = new RegExp('<' + tagPattern + '\\b([^>]*)>([\\s\\S]*?)<\\/' + tagPattern + '>', 'gi');
   const out = [];
   let match;
